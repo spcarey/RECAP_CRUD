@@ -12,6 +12,7 @@ library(shinydashboard)
 library(DT)
 library(lubridate)
 library(dbplyr)
+library(pool)
 
 
 #DATABASE CONNECTION POOL
@@ -20,9 +21,9 @@ recapdb <- dbPool(
   
   drv = RMySQL::MySQL(),
   dbname = "recap",
-  host = "127.0.0.1",
+  host = "localhost",
   port = 3306,
-  username = "root",
+  username = "recapuser",
   password = "!QAZ2wsx"
   
 )
@@ -172,6 +173,10 @@ ui <- dashboardPage(
 
 server <- function(input, output) { 
   
+    observeEvent(input$select_button, {
+      showNotification("Query Sent")
+    })
+  
     #observes the action button on the INSERT tab. Takes values from choices, sends as SQL query
     select_button_click <- eventReactive( input$select_button,  {
       
@@ -183,6 +188,9 @@ server <- function(input, output) {
         df %>%
           mutate(Date = mdy(Date)) %>%
           filter( Date >= ymd( input$select_date[1]) & Date <= ymd(input$select_date[2]))
+        
+         
+        
         }) 
     
     #end select button click
@@ -190,7 +198,7 @@ server <- function(input, output) {
     # OUTPUT for table in SELECT Tab
     output$select_tab <- renderDataTable(
       select_button_click()
-    )
+      )
   
   # Disconnects Database pool instance
   onStop(function() {

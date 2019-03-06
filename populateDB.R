@@ -1,21 +1,29 @@
 library(pool)
 library(dplyr)
+library(readr)
 
 recapdb <- dbPool(
    
    drv = RMySQL::MySQL(),
    dbname = "recap",
-   host = "127.0.0.1",
+   host = "localhost",
    port = 3306,
-   username = "root",
+   username = "recapuser",
    password = "!QAZ2wsx"
    
 )
 
+Sleepy <- read_csv("Sleepy_Usage_Report.csv")
+Doc <- read_csv("Doc_Usage_Report.csv")
+Grupmy <- read_csv("Grumpy_Usage_Report.csv")
+Sneezy <- read_csv("Sneezy_Usage_Report.csv")
+Fleet_Info <- read_csv("Fleet_Info.csv")
+
+
 copy_to(
    dest = recapdb,
    name = "Sleepy",
-   df = Sleepy_Usage_Report,
+   df = Sleepy,
    temporary = FALSE,
    overwrite = TRUE
    ) 
@@ -23,7 +31,7 @@ copy_to(
 copy_to(
    dest = recapdb,
    name = "Grumpy",
-   df = Grumpy_Usage_Report,
+   df = Grumpy,
    temporary = FALSE,
    overwrite = TRUE
 ) 
@@ -31,7 +39,7 @@ copy_to(
 copy_to(
    dest = recapdb,
    name = "Doc",
-   df = Doc_Usage_Report,
+   df = Doc,
    temporary = FALSE,
    overwrite = TRUE
 ) 
@@ -39,7 +47,7 @@ copy_to(
 copy_to(
    dest = recapdb,
    name = "Sneezy",
-   df = Sneezy_Usage_Report,
+   df = Sneezy,
    temporary = FALSE,
    overwrite = TRUE
 ) 
