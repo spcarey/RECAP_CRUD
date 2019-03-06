@@ -10,6 +10,8 @@
 library(shiny)
 library(shinydashboard)
 library(DT)
+library(lubridate)
+library(dbplyr)
 
 
 #DATABASE CONNECTION POOL
@@ -57,10 +59,10 @@ ui <- dashboardPage(
                                selected = "Sleepy",
                                selectize = TRUE),
                    #WIDGET FOR SELECTING DATES
-                   dateRangeInput('select_dateRange',
+                   dateRangeInput('select_date',
                                   label = 'Select Date',
                                   start = '1/1/1995', end = Sys.Date(),
-                                  format = 'm/d/yyyy'),
+                                  format = 'yyyy/m/d'),
                    actionButton("select_button", "View Log" )
                    
                    
@@ -68,9 +70,9 @@ ui <- dashboardPage(
             
           ),  #END FIRST COLUMN INSERT TAB
               #BEGIN SECOND COLUMN INSERT TAB
-          column( width = 8
+          column( width = 8,
                   
-                 #datatableOutput
+                 dataTableOutput("select_tab")
           )
         )
       ),# END SELECT TAB
@@ -168,7 +170,34 @@ ui <- dashboardPage(
   ) # END BODY CONTENT
 )
 
-server <- function(input, output) { }
+server <- function(input, output) { 
+  
+    #observes the action button on the INSERT tab. Takes values from choices, sends as SQL query
+    select_button_click <- eventReactive( input$select_button,  {
+      
+      
+   df <- recapdb %>% 
+        tbl(input$select_tail) %>% collect()
+        
+        
+        df %>%
+          mutate(Date = mdy(Date)) %>%
+          filter( Date >= ymd( input$select_date[1]) & Date <= ymd(input$select_date[2]))
+        }) 
+    
+    #end select button click
+    
+    # OUTPUT for table in SELECT Tab
+    output$select_tab <- renderDataTable(
+      select_button_click()
+    )
+  
+  # Disconnects Database pool instance
+  onStop(function() {
+    poolClose(recapdb)
+  })
+  
+  }
 
 shinyApp(ui, server)
 

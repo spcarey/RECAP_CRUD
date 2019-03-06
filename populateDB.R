@@ -88,7 +88,7 @@ killDbConnections <- function () {
 
 RMySQL::dbDisconnect(RMySQL::dbListConnections(RMySQL::MySQL())[[1]])
 
-
+RMySQL::dbListConnections(RMySQL::MySQL())
 
 sidebarPanel(selectInput("tail_db", h4(em(p(strong("Please select a tail number."))), style = "color: green" ), 
                          choices = c(Choose="", as.list(fleet.data$Tail_Num)),
@@ -102,4 +102,11 @@ sidebarPanel(selectInput("tail_db", h4(em(p(strong("Please select a tail number.
 mainPanel(
   verbatimTextOutput("SQL_INSERT")
 ) ##/MainPanel 
+
+
+
+recapdb %>% 
+  tbl("Sleepy") %>% 
+ filter( Date >='1/1/1995' & Date <= '3/6/2019') %>% 
+  collect()
 
