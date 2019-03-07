@@ -179,7 +179,7 @@ server <- function(input, output) {
       
       #showNotification("Query Sent")
        # showModal(modalDialog(title = "Important","Important Message"))
-      shinyalert("Ooops!!!", "Something went wrong", type = "error")
+      #shinyalert("Ooops!!!", "Something went wrong", type = "error")
     })
   
     #Reacts the action button on the INSERT tab. Takes values from choices, sends as SQL query
