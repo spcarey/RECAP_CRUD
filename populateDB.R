@@ -75,7 +75,7 @@ query <- sqlInterpolate(recapdb, sql_code )
 dbGetQuery(recapdb, sql_code)
 
 recapdb %>%
-  tbl("Sleepy") %>%
+  tbl("Sleepy") %>% 
   dplyr::collect() %>% tail()
 
 
@@ -118,3 +118,24 @@ recapdb %>%
  filter( Date >='1/1/1995' & Date <= '3/6/2019') %>% 
   collect()
 
+datex <- "11/1/1999"
+
+datey <- (recapdb %>% tbl("Sleepy") %>% select("Date") %>% collect() %>% as.list() %>% mdy(date) )
+
+if(datex %in% datey[[1]]){
+  print("Truth is found")
+} else {
+  print("Truth is not found")
+}
+date
+
+datez <- paste0('^',datex,'$')
+
+
+str_detect(datey$Date,  datez)
+
+grepl(datez, datey$Date)
+
+datex %in% datey[[1]]
+
+as.character( mdy(datey[[1]]))
