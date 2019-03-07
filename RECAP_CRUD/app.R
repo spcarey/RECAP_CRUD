@@ -14,6 +14,7 @@ library(lubridate)
 library(dbplyr)
 library(pool)
 library(shinyalert)
+library(shinyWidgets)
 
 
 #DATABASE CONNECTION POOL
@@ -22,9 +23,9 @@ recapdb <- dbPool(
   
   drv = RMySQL::MySQL(),
   dbname = "recap",
-  host = "localhost",
+  host = "127.0.0.1",
   port = 3306,
-  username = "recapuser",
+  username = "root",
   password = "!QAZ2wsx"
   
 )
@@ -34,6 +35,8 @@ fleet_info <- recapdb %>%
   dplyr::collect() 
 
 
+
+#--------------------START UI FUNCTION----------------------------#
 ui <- dashboardPage(
         dashboardHeader(title = "FLIGHT LOG"),
   dashboardSidebar(
@@ -56,17 +59,25 @@ ui <- dashboardPage(
           column(width = 4,
                  wellPanel(
                    #WIDGET FOR SELECTING AIRCRAFT
-                   selectInput("select_tail",
+                   selectInput(inputId = "select_tail",
                                "Select Tail Number", 
                                choices = c(Choose="", as.list(fleet_info$Tail_Num)),
                                selected = "Sleepy",
                                selectize = TRUE),
                    #WIDGET FOR SELECTING DATES
-                   dateRangeInput('select_date',
-                                  label = 'Select Date',
-                                  start = '1/1/1995', end = Sys.Date(),
-                                  format = 'yyyy/m/d'),
-                   actionButton("select_button", "View Log" )
+                   airDatepickerInput(inputId = 'select_date1',
+                                  label = 'Select Start Date',
+                                  range = FALSE,
+                                  value = ('1995-1-1'),
+                                  multiple = FALSE
+                                  ),
+                   airDatepickerInput(inputId = 'select_date2',
+                                      label = 'Select End Date',
+                                      range = FALSE,
+                                      multiple = FALSE,
+                                      value = Sys.Date() 
+                   ),
+                   actionButton(inputId = "select_button", "View Log" )
                    
                    
                  )
@@ -88,24 +99,32 @@ ui <- dashboardPage(
           column(width = 4,
                  wellPanel(
                    #WIDGET FOR SELECTING AIRCRAFT
-                   selectInput("insert_tail",
+                   
+                   
+                
+                   selectInput(inputId = "insert_tail",
                                "Select Tail Number", 
                                choices = c(Choose="", as.list(fleet_info$Tail_Num)),
-                               selected = "Sleepy",
-                               selectize = TRUE),
+                               selected = "Sleepy"
+                               ),
                    #WIDGET FOR SELECTING DATES
-                   dateInput("insert_date", "Select Date: ", value = Sys.Date(), format = "m/d/yyyy"),
-                   numericInput("hours_insert", label = "Enter # of Flight Hours:", value = 0, min = 0),
-                   actionButton("insert_button", "Add to Log" )
+                   airDatepickerInput(inputId = 'insert_date',
+                                      label = 'Select Date of new Record:',
+                                      range = FALSE,
+                                      multiple = FALSE,
+                                      value = Sys.Date()),
+                   numericInput(inputId = "insert_hours", label = "Enter Total # of Flight Hours:", value = 0, min = 0),
+                   numericInput(inputId = "insert_opnhrs", label = "Of the total flight hours how many were Operational Hours(DEPLOYED):", value = 0, min = 0),
+                   actionButton(inputId = "insert_button", "Add to Log" )
                    
                    
                  )
                  
           ),  #END FIRST COLUMN SELECT TAB
               #BEGIN SECOND COLUMN SELECT TAB
-          column( width = 8
+          column( width = 8,
                   
-                  #datatableOutput
+                  dataTableOutput("insert_data")
           )
         )
       ), #END INSERT TAB
@@ -119,24 +138,29 @@ ui <- dashboardPage(
           column(width = 4,
                  wellPanel(
                    #WIDGET FOR SELECTING AIRCRAFT
-                   selectInput("update_tail",
+                   selectInput(inputId = "update_tail",
                                "Select Tail Number", 
                                choices = c(Choose="", as.list(fleet_info$Tail_Num)),
                                selected = "Sleepy",
                                selectize = TRUE),
                    #WIDGET FOR SELECTING DATES
-                   dateInput("update_date", "Select Date: ", value = Sys.Date(), format = "m/d/yyyy"),
-                   numericInput("hours_update", label = "Enter # of Flight Hours:", value = 0, min = 0),
-                   actionButton("update_button", "Edit Log" )
+                   airDatepickerInput(inputId = 'update_date',
+                                      label = 'Select Record date to be updated:',
+                                      range = FALSE,
+                                      multiple = FALSE,
+                                      value = Sys.Date()),
+                   numericInput(inputId = "update_hours", label = "Enter Total # of Flight Hours:", value = 0, min = 0),
+                   numericInput(inputId = "update_opnhrs", label =  "Of the total flight hours how many were Operational Hours(DEPLOYED):", value = 0, min = 0),
+                   actionButton(inputId = "update_button", "Edit Log" )
                    
                    
                  )
                  
           ),  #END FIRST COLUMN UPDATE TAB
           #BEGIN SECOND COLUMN UPDATE TAB
-          column( width = 8
+          column( width = 8,
                   
-                  #datatableOutput
+                  dataTableOutput("update_data")
           )
         )
       ), # END UPDATE TAB
@@ -145,7 +169,7 @@ ui <- dashboardPage(
         tabName = "DELETE",
         h2("Delete Log Entry"),
         fluidRow(
-          # BEGIN FIRST COLUMN in INSERT TAB
+          # BEGIN FIRST COLUMN in DELETE TAB
           column(width = 4,
                  wellPanel(
                    #WIDGET FOR SELECTING AIRCRAFT
@@ -155,17 +179,21 @@ ui <- dashboardPage(
                                selected = "Sleepy",
                                selectize = TRUE),
                    #WIDGET FOR SELECTING DATES
-                   dateInput("delete_date", "Select Date: ", value = Sys.Date(), format = "m/d/yyyy"),
-                   actionButton("delete_button", "Add to Log" )
+                   airDatepickerInput(inputId = 'delete_date',
+                                      label = 'Select Date of record to be removed:',
+                                      range = FALSE,
+                                      multiple = FALSE,
+                                      value = Sys.Date()),
+                   actionButton("delete_button", "Delete Log Entry" )
                    
                    
                  )
                  
           ),  #END FIRST COLUMN DELETE TAB
           #BEGIN SECOND COLUMN DELETE TAB
-          column( width = 8
+          column( width = 8,
                   
-                  #datatableOutput
+                  dataTableOutput("delete_data")
           )
         )
       )
@@ -173,7 +201,12 @@ ui <- dashboardPage(
   ) # END BODY CONTENT
 )
 
+
+#-----------------START SERVER Function----------------#
+
 server <- function(input, output) { 
+  
+  
   
     observeEvent(input$select_button, {
       
@@ -192,7 +225,7 @@ server <- function(input, output) {
         
         df %>%
           mutate(Date = mdy(Date)) %>%
-          filter( Date >= ymd( input$select_date[1]) & Date <= ymd(input$select_date[2]))
+          filter( Date >= ymd( input$select_date1 ) & Date <= ymd(input$select_date2))
         
          
         
@@ -204,13 +237,126 @@ server <- function(input, output) {
     output$select_tab <- renderDataTable(
       select_button_click()
       )
-  
+    
+    
+    
+    #______________INSERT TAB_______________________________#   
+    #Reacts to button click on INSERT Tab
+    
+    
+    observeEvent(input$insert_button, {
+      
+      datey <- (recapdb %>% tbl(input$insert_tail) %>% select("Date") %>% collect() %>% as.list() )
+      datey <- mdy(datey[[1]]) %>% as.character()
+      
+      if(as.character(input$insert_date) %in% datey){
+        
+        shinyalert("Ooops!!!", "This Date already has a Record", type = "error")
+        
+      } else {
+        date <- as.character( format(input$insert_date, "%m/%d/%Y"))
+       sql_code <- paste0("INSERT INTO"," ",input$insert_tail," ","VALUES"," ","(","\'",date,"\',","\'",input$insert_hours,"\'",","," ","\'",input$insert_opnhrs,"\'",")")
+       #print(sql_code)
+       dbGetQuery(recapdb, sql_code)
+       output$insert_data <- renderDataTable(recapdb %>%
+                                               tbl(input$insert_tail) %>% 
+                                               collect() %>% mutate(Date = mdy(Date)) %>% 
+                                              arrange(desc(Date)))
+       shinyalert("Success!", "New log entry added", type = "success")
+      }
+      
+    })# end observe event for INSERT TAB
+    
+    #_________________________UPDATE TAB_______________________________# 
+    
+    #Reacts to button click on UPDATE Tab
+    observeEvent(input$update_button, {
+      
+      #get date column, coerce to date list for use in IF statement
+      datey <- (recapdb %>% tbl(input$update_tail) %>% select("Date") %>% collect() %>% as.list() )
+      
+      #coerce date list from above into a character list for use as a condition in the IF statement
+      datey <- mdy(datey[[1]]) %>% as.character()
+      
+      #IF DATE INPUT IS IN DATABASE PROCEED WITH UPDATE, ELSE SHOW ERROR POPUP
+      if(as.character(input$update_date) %in% datey){ 
+        
+        date <- as.character( format(input$update_date, "%m/%d/%Y"))
+        
+        #Build SQL Statement
+        sql_code <- paste0("UPDATE"," ",input$update_tail," ","SET"," ","Hours ="," ","\'", input$update_hours, "\'"," ",",","Opn_Hrs ="," ","\'", input$update_hours, "\'"," ","WHERE Date ="," ","\'",date,"\'",";")
+        print(sql_code)
+        #send SQL Statement
+        dbGetQuery(recapdb, sql_code)
+        
+        #Create Output object Table that shows updated entry
+        output$update_data <- renderDataTable(recapdb %>%
+                                                tbl(input$update_tail) %>% 
+                                                filter(Date == date) %>% collect()
+                                              )
+        #popup notification to show success
+        shinyalert("Success!", "Previous Log entry updated", type = "success")
+        
+      } else {
+        
+        #ERROR POPUP WINDOW
+        shinyalert("Ooops!!!", "This Date doesn't have a record", type = "error")
+      }
+      
+    })# end observe event for UPDATE TAB
+    
+    
+  #______________DELETE TAB_______________________________#
+    #Reacts to button click on DELETE Tab
+    observeEvent(input$delete_button, {
+      
+      #get date column, coerce to date list for use in IF statement
+      datey <- (recapdb %>% tbl(input$delete_tail) %>% select("Date") %>% collect() %>% as.list() )
+      
+      #coerce date list from above into a character list for use as a condition in the IF statement
+      datey <- mdy(datey[[1]]) %>% as.character()
+      
+      #IF DATE INPUT IS IN DATABASE PROCEED WITH UPDATE, ELSE SHOW ERROR POPUP
+      if(as.character(input$delete_date) %in% datey){ 
+        
+        date <- as.character( format(input$delete_date, "%m/%d/%Y"))
+        
+        #Build SQL Statement
+        sql_code <- paste0("DELETE FROM"," ",input$delete_tail," ","WHERE"," ","Date ="," ","\'", date, "\'",";")
+        print(sql_code)
+        #send SQL Statement
+        dbGetQuery(recapdb, sql_code)
+        
+        #Create Output object Table that shows updated entry
+        output$delete_data <- renderDataTable(recapdb %>%
+                                                tbl(input$update_tail) %>% 
+                                                collect()
+                                             )
+        #popup notification to show success
+        shinyalert("Success!", "Log entry Removed", type = "success")
+        
+      } else {
+        
+        #ERROR POPUP WINDOW
+        shinyalert("Ooops!!!", "This Date doesn't have a record", type = "error")
+      }
+      
+    })# end observe event for UPDATE TAB
+    
+     eventReactive(input$insert_tail, { 
+      #renderPrint( recapdb %>% tbl(input$insert_tail) %>% ncol() )
+      print("PRINT")
+    })
+    
+  #___________________END TABS___________________#  
+    
   # Disconnects Database pool instance
   onStop(function() {
     poolClose(recapdb)
   })
   
   }
+#__________________END SERVER____________________#
 
-shinyApp(ui, server)
+shinyApp(ui, server) # Runs app by calling the ui and server functions
 
