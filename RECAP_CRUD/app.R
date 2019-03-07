@@ -35,6 +35,8 @@ fleet_info <- recapdb %>%
   dplyr::collect() 
 
 
+
+#--------------------START UI FUNCTION----------------------------#
 ui <- dashboardPage(
         dashboardHeader(title = "FLIGHT LOG"),
   dashboardSidebar(
@@ -97,18 +99,22 @@ ui <- dashboardPage(
           column(width = 4,
                  wellPanel(
                    #WIDGET FOR SELECTING AIRCRAFT
+                   
+                   
+                
                    selectInput(inputId = "insert_tail",
                                "Select Tail Number", 
                                choices = c(Choose="", as.list(fleet_info$Tail_Num)),
-                               selected = "Sleepy",
-                               selectize = TRUE),
+                               selected = "Sleepy"
+                               ),
                    #WIDGET FOR SELECTING DATES
                    airDatepickerInput(inputId = 'insert_date',
                                       label = 'Select Date of new Record:',
                                       range = FALSE,
                                       multiple = FALSE,
                                       value = Sys.Date()),
-                   numericInput(inputId = "insert_hours", label = "Enter # of Flight Hours:", value = 0, min = 0),
+                   numericInput(inputId = "insert_hours", label = "Enter Total # of Flight Hours:", value = 0, min = 0),
+                   numericInput(inputId = "insert_opnhrs", label = "Of the total flight hours how many were Operational Hours(DEPLOYED):", value = 0, min = 0),
                    actionButton(inputId = "insert_button", "Add to Log" )
                    
                    
@@ -143,7 +149,8 @@ ui <- dashboardPage(
                                       range = FALSE,
                                       multiple = FALSE,
                                       value = Sys.Date()),
-                   numericInput(inputId = "update_hours", label = "Enter # of Flight Hours:", value = 0, min = 0),
+                   numericInput(inputId = "update_hours", label = "Enter Total # of Flight Hours:", value = 0, min = 0),
+                   numericInput(inputId = "update_opnhrs", label =  "Of the total flight hours how many were Operational Hours(DEPLOYED):", value = 0, min = 0),
                    actionButton(inputId = "update_button", "Edit Log" )
                    
                    
@@ -195,9 +202,11 @@ ui <- dashboardPage(
 )
 
 
-#-----------------START SERVER FILE----------------#
+#-----------------START SERVER Function----------------#
 
 server <- function(input, output) { 
+  
+  
   
     observeEvent(input$select_button, {
       
@@ -229,7 +238,12 @@ server <- function(input, output) {
       select_button_click()
       )
     
+    
+    
+    #______________INSERT TAB_______________________________#   
     #Reacts to button click on INSERT Tab
+    
+    
     observeEvent(input$insert_button, {
       
       datey <- (recapdb %>% tbl(input$insert_tail) %>% select("Date") %>% collect() %>% as.list() )
@@ -241,7 +255,8 @@ server <- function(input, output) {
         
       } else {
         date <- as.character( format(input$insert_date, "%m/%d/%Y"))
-       sql_code <- paste0("INSERT INTO"," ",input$insert_tail," ","(Date , Hours)"," ","VALUES"," ","(","\'",date,"\'",",","\'",input$insert_hours,"\'",")")
+       sql_code <- paste0("INSERT INTO"," ",input$insert_tail," ","VALUES"," ","(","\'",date,"\',","\'",input$insert_hours,"\'",","," ","\'",input$insert_opnhrs,"\'",")")
+       #print(sql_code)
        dbGetQuery(recapdb, sql_code)
        output$insert_data <- renderDataTable(recapdb %>%
                                                tbl(input$insert_tail) %>% 
@@ -252,7 +267,7 @@ server <- function(input, output) {
       
     })# end observe event for INSERT TAB
     
-    
+    #_________________________UPDATE TAB_______________________________# 
     
     #Reacts to button click on UPDATE Tab
     observeEvent(input$update_button, {
@@ -269,7 +284,7 @@ server <- function(input, output) {
         date <- as.character( format(input$update_date, "%m/%d/%Y"))
         
         #Build SQL Statement
-        sql_code <- paste0("UPDATE"," ",input$update_tail," ","SET"," ","Hours ="," ","\'", input$update_hours, "\'"," ","WHERE Date ="," ","\'",date,"\'",";")
+        sql_code <- paste0("UPDATE"," ",input$update_tail," ","SET"," ","Hours ="," ","\'", input$update_hours, "\'"," ",",","Opn_Hrs ="," ","\'", input$update_hours, "\'"," ","WHERE Date ="," ","\'",date,"\'",";")
         print(sql_code)
         #send SQL Statement
         dbGetQuery(recapdb, sql_code)
@@ -310,7 +325,7 @@ server <- function(input, output) {
         sql_code <- paste0("DELETE FROM"," ",input$delete_tail," ","WHERE"," ","Date ="," ","\'", date, "\'",";")
         print(sql_code)
         #send SQL Statement
-        #dbGetQuery(recapdb, sql_code)
+        dbGetQuery(recapdb, sql_code)
         
         #Create Output object Table that shows updated entry
         output$delete_data <- renderDataTable(recapdb %>%
@@ -328,7 +343,12 @@ server <- function(input, output) {
       
     })# end observe event for UPDATE TAB
     
+     eventReactive(input$insert_tail, { 
+      #renderPrint( recapdb %>% tbl(input$insert_tail) %>% ncol() )
+      print("PRINT")
+    })
     
+  #___________________END TABS___________________#  
     
   # Disconnects Database pool instance
   onStop(function() {
@@ -336,6 +356,7 @@ server <- function(input, output) {
   })
   
   }
+#__________________END SERVER____________________#
 
-shinyApp(ui, server)
+shinyApp(ui, server) # Runs app by calling the ui and server functions
 
