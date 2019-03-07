@@ -13,6 +13,7 @@ library(DT)
 library(lubridate)
 library(dbplyr)
 library(pool)
+library(shinyalert)
 
 
 #DATABASE CONNECTION POOL
@@ -34,10 +35,10 @@ fleet_info <- recapdb %>%
 
 
 ui <- dashboardPage(
-  dashboardHeader(title = "FLIGHT LOG"),
+        dashboardHeader(title = "FLIGHT LOG"),
   dashboardSidebar(
     sidebarMenu( #DEFINE SIDE BAR NAV ICONS
-      menuItem("QUERY LOG", tabName = "SELECT", icon = icon("database")),
+      menuItem("VIEW LOG", tabName = "SELECT", icon = icon("database")),
       menuItem("ADD TO LOG", tabName = "INSERT", icon = icon("plus")),
       menuItem("UPDATE LOG ENTRY", tabName = "UPDATE", icon = icon("user-edit")),
       menuItem("DELETE LOG ENTRY", tabName = "DELETE", icon = icon("backspace"))
@@ -48,7 +49,8 @@ ui <- dashboardPage(
       # BEGIN SELECT TAB
       tabItem(
         tabName = "SELECT",
-        h2("  Query Flight Log"),
+        h2("  View Flight Log"),
+        useShinyalert(),
         fluidRow(
           # BEGIN FIRST COLUMN in SELECT TAB
           column(width = 4,
@@ -174,10 +176,13 @@ ui <- dashboardPage(
 server <- function(input, output) { 
   
     observeEvent(input$select_button, {
-      showNotification("Query Sent")
+      
+      #showNotification("Query Sent")
+       # showModal(modalDialog(title = "Important","Important Message"))
+      shinyalert("Ooops!!!", "Something went wrong", type = "error")
     })
   
-    #observes the action button on the INSERT tab. Takes values from choices, sends as SQL query
+    #Reacts the action button on the INSERT tab. Takes values from choices, sends as SQL query
     select_button_click <- eventReactive( input$select_button,  {
       
       
