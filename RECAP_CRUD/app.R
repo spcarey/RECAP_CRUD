@@ -18,6 +18,91 @@ library(dplyr)
 
 
 
+library("jsonlite")
+
+getVolumeDir <- function(volumeName)
+{
+  json <- Sys.getenv("VCAP_SERVICES")
+  if (json == '')
+  {
+    stop("Missing VCAP_SERVICES")
+  }
+  vcapServices <- fromJSON(json, simplifyVector = FALSE, simplifyDataFrame = FALSE)
+  
+  for (serviceType in vcapServices)
+  {
+    for (service in serviceType)
+    {
+      if (service$name == volumeName) {
+        return ( fromJSON(toJSON(service))$volume_mounts$container_dir )
+      }
+    }
+  }
+}
+
+getCredentials <- function(serviceName)
+{
+  json <- Sys.getenv("VCAP_SERVICES")
+  if (json == '')
+  {
+    stop("Missing VCAP_SERVICES")
+    
+  }
+  vcapServices <- fromJSON(json, simplifyVector = FALSE, simplifyDataFrame = FALSE)
+  
+  for (serviceType in vcapServices)
+  {
+    for (service in serviceType)
+    {
+      if (service$name == serviceName) {
+        return ( fromJSON(toJSON(service))$credentials )
+      }
+    }
+  }
+}
+
+
+traceJsonNode <- function(name, node, printNode = FALSE) {
+  
+  if (printNode == TRUE)  {
+    cat(paste(name, "[", class(node), "]", length(node), "(", node, ")\n"))
+  }else {
+    cat(paste(name, "[", class(node), "]", length(node), "\n"))
+  }
+}
+
+
+library(pool)
+
+dbCredentials <- getCredentials("recap_db")
+cat(paste(dbCredentials))
+cat(paste("host:", dbCredentials$hostname, "dbname:", dbCredentials$name))
+
+
+OpenConnMySQL <- function() {
+  print("Connecting to DB ...")
+  con_sql <- pool::dbPool (drv = RMySQL::MySQL(), 
+                           dbname = dbCredentials$name,
+                           host = dbCredentials$hostname,
+                           port = 3306,
+                           username = dbCredentials$username,
+                           password = dbCredentials$password
+  )
+  
+  print(summary(con_sql))
+  
+  print("Connected to DB")
+  OpenConnMySQL = con_sql
+}
+
+recapdb <- pool::dbPool (drv = RMySQL::MySQL(), 
+                         dbname = "service_instance_db",
+                         host = 'q-n3s3y1.q-g28722.bosh',
+                         port = 3306,
+                         username = "7b803322829944d48045641ab4588777",
+                         password = "ou5k1w32e0z1zabb"
+)
+
 Sleepy <- read.csv("Sleepy_Usage_Report.csv", stringsAsFactors = FALSE)
 Sleepy$Date <- as.Date(Sleepy$Date, format = "%m/%d/%Y") %>% format("%m/%d/%Y") 
 Doc <- read.csv("Doc_Usage_Report.csv", stringsAsFactors = FALSE)
