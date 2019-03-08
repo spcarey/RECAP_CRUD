@@ -11,22 +11,36 @@ library(shinyWidgets)
 library(dplyr)
 
 
-source("MySQL_CONN.R",  local=environment())
+#source("MySQL_CONN.R")
 
 #DATABASE CONNECTION POOL
 # Defines the parameters for connecting to the database 
 
-recapdb <- OpenConnMySQL()
 
-Sleepy <- read_csv("RECAP_CRUD/Sleepy_Usage_Report.csv")
+
+Sleepy <- read.csv("Sleepy_Usage_Report.csv", stringsAsFactors = FALSE)
 Sleepy$Date <- as.Date(Sleepy$Date, format = "%m/%d/%Y") %>% format("%m/%d/%Y") 
-Doc <- read_csv("RECAP_CRUD/Doc_Usage_Report.csv")
+Doc <- read.csv("Doc_Usage_Report.csv", stringsAsFactors = FALSE)
 Doc$Date <- as.Date(Doc$Date, format = "%m/%d/%Y") %>% format("%m/%d/%Y") 
-Grumpy <- read_csv("RECAP_CRUD/Grumpy_Usage_Report.csv")
+Grumpy <- read.csv("Grumpy_Usage_Report.csv", stringsAsFactors = FALSE)
 Grumpy$Date <- as.Date(Grumpy$Date, format = "%m/%d/%Y") %>% format("%m/%d/%Y") 
-Sneezy <- read_csv("RECAP_CRUD/Sneezy_Usage_Report.csv")
+Sneezy <- read.csv("Sneezy_Usage_Report.csv", stringsAsFactors = FALSE)
 Sneezy$Date <- as.Date(Sneezy$Date, format = "%m/%d/%Y") %>% format("%m/%d/%Y") 
-Fleet_Info <- read_csv("RECAP_CRUD/Fleet_Info.csv")
+Fleet_Info <- read.csv("Fleet_Info.csv", stringsAsFactors = FALSE)
+
+
+
+
+
+#recapdb <- dbPool(
+  
+ # drv = RMySQL::MySQL(),
+  #dbname = "recap",
+  #host = "127.0.0.1",
+  #port = 3306,
+  #username = "root",
+  #password = "!QAZ2wsx")
+
 
 
 copy_to(
@@ -61,6 +75,8 @@ copy_to(
   overwrite = TRUE
 ) 
 
+
+
 copy_to(
   dest = recapdb,
   name = "Fleet_Info",
@@ -70,20 +86,7 @@ copy_to(
 ) 
 
 
-#recapdb <- dbPool(
-  
- # drv = RMySQL::MySQL(),
-  #dbname = "recap",
-  #host = "127.0.0.1",
-  #port = 3306,
-  #username = "root",
-  #password = "!QAZ2wsx")
-
-fleet_info <- recapdb %>%
-  tbl("Fleet_Info") %>%
-  dplyr::collect() 
-
-
+fleet_info <- recapdb %>% tbl("Fleet_Info") %>% dplyr::collect() 
 
 #--------------------START UI FUNCTION----------------------------#
 ui <- dashboardPage(
@@ -110,7 +113,7 @@ ui <- dashboardPage(
                    #WIDGET FOR SELECTING AIRCRAFT
                    selectInput(inputId = "select_tail",
                                "Select Tail Number", 
-                               choices = c(Choose="", as.list(fleet_info$Tail_Num)),
+                               choices = c(Choose="", as.list(Fleet_Info$Tail_Num)),
                                selected = "Sleepy",
                                selectize = TRUE),
                    #WIDGET FOR SELECTING DATES
@@ -153,7 +156,7 @@ ui <- dashboardPage(
                 
                    selectInput(inputId = "insert_tail",
                                "Select Tail Number", 
-                               choices = c(Choose="", as.list(fleet_info$Tail_Num)),
+                               choices = c(Choose="", as.list(Fleet_Info$Tail_Num)),
                                selected = "Sleepy"
                                ),
                    #WIDGET FOR SELECTING DATES
@@ -189,7 +192,7 @@ ui <- dashboardPage(
                    #WIDGET FOR SELECTING AIRCRAFT
                    selectInput(inputId = "update_tail",
                                "Select Tail Number", 
-                               choices = c(Choose="", as.list(fleet_info$Tail_Num)),
+                               choices = c(Choose="", as.list(Fleet_Info$Tail_Num)),
                                selected = "Sleepy",
                                selectize = TRUE),
                    #WIDGET FOR SELECTING DATES
@@ -224,7 +227,7 @@ ui <- dashboardPage(
                    #WIDGET FOR SELECTING AIRCRAFT
                    selectInput("delete_tail",
                                "Select Tail Number", 
-                               choices = c(Choose="", as.list(fleet_info$Tail_Num)),
+                               choices = c(Choose="", as.list(Fleet_Info$Tail_Num)),
                                selected = "Sleepy",
                                selectize = TRUE),
                    #WIDGET FOR SELECTING DATES
