@@ -15,20 +15,25 @@ library(dbplyr)
 library(pool)
 library(shinyalert)
 library(shinyWidgets)
+library(dplyr)
 
+
+source("MySQL_CONN.R",  local=environment())
 
 #DATABASE CONNECTION POOL
 # Defines the parameters for connecting to the database 
-recapdb <- dbPool(
+
+recapdb <- OpenConnMySQL()
+
+
+#recapdb <- dbPool(
   
-  drv = RMySQL::MySQL(),
-  dbname = "recap",
-  host = "127.0.0.1",
-  port = 3306,
-  username = "root",
-  password = "!QAZ2wsx"
-  
-)
+ # drv = RMySQL::MySQL(),
+  #dbname = "recap",
+  #host = "127.0.0.1",
+  #port = 3306,
+  #username = "root",
+  #password = "!QAZ2wsx")
 
 fleet_info <- recapdb %>%
   tbl("Fleet_Info") %>%

@@ -1,0 +1,16 @@
+---
+packages:
+  - packages:
+     - name: shiny
+     - name: shinydashboard
+     - name: magrittr
+     - name: dplyr
+     - name: DT
+     - name: lubridate
+     - name: dbplyr
+     - name: shinyalert
+     - name: shinyWidgets
+     - name: pool
+     - name: jsonlite
+
+
