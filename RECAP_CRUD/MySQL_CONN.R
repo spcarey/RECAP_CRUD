@@ -1,5 +1,7 @@
 source("credentials.R",  local=environment())
 
+library(pool)
+
 dbCredentials <- getCredentials("recap_db")
 cat(paste("host:", dbCredentials$hostname, "dbname:", dbCredentials$name))
 

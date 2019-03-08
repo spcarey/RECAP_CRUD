@@ -1,11 +1,4 @@
-#
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
-#
+
 
 library(shiny)
 library(shinydashboard)
@@ -24,6 +17,57 @@ source("MySQL_CONN.R",  local=environment())
 # Defines the parameters for connecting to the database 
 
 recapdb <- OpenConnMySQL()
+
+Sleepy <- read_csv("RECAP_CRUD/Sleepy_Usage_Report.csv")
+Sleepy$Date <- as.Date(Sleepy$Date, format = "%m/%d/%Y") %>% format("%m/%d/%Y") 
+Doc <- read_csv("RECAP_CRUD/Doc_Usage_Report.csv")
+Doc$Date <- as.Date(Doc$Date, format = "%m/%d/%Y") %>% format("%m/%d/%Y") 
+Grumpy <- read_csv("RECAP_CRUD/Grumpy_Usage_Report.csv")
+Grumpy$Date <- as.Date(Grumpy$Date, format = "%m/%d/%Y") %>% format("%m/%d/%Y") 
+Sneezy <- read_csv("RECAP_CRUD/Sneezy_Usage_Report.csv")
+Sneezy$Date <- as.Date(Sneezy$Date, format = "%m/%d/%Y") %>% format("%m/%d/%Y") 
+Fleet_Info <- read_csv("RECAP_CRUD/Fleet_Info.csv")
+
+
+copy_to(
+  dest = recapdb,
+  name = "Sleepy",
+  df = Sleepy,
+  temporary = FALSE,
+  overwrite = TRUE
+) 
+
+copy_to(
+  dest = recapdb,
+  name = "Grumpy",
+  df = Grumpy,
+  temporary = FALSE,
+  overwrite = TRUE
+) 
+
+copy_to(
+  dest = recapdb,
+  name = "Doc",
+  df = Doc,
+  temporary = FALSE,
+  overwrite = TRUE
+) 
+
+copy_to(
+  dest = recapdb,
+  name = "Sneezy",
+  df = Sneezy,
+  temporary = FALSE,
+  overwrite = TRUE
+) 
+
+copy_to(
+  dest = recapdb,
+  name = "Fleet_Info",
+  df = Fleet_Info,
+  temporary = FALSE,
+  overwrite = TRUE
+) 
 
 
 #recapdb <- dbPool(
