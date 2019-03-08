@@ -14,15 +14,15 @@ recapdb <- dbPool(
    
 )
 
-Sleepy <- read_csv("Sleepy_Usage_Report.csv")
+Sleepy <- read_csv("RECAP_CRUD/Sleepy_Usage_Report.csv")
 Sleepy$Date <- as.Date(Sleepy$Date, format = "%m/%d/%Y") %>% format("%m/%d/%Y") 
-Doc <- read_csv("Doc_Usage_Report.csv")
+Doc <- read_csv("RECAP_CRUD/Doc_Usage_Report.csv")
 Doc$Date <- as.Date(Doc$Date, format = "%m/%d/%Y") %>% format("%m/%d/%Y") 
-Grumpy <- read_csv("Grumpy_Usage_Report.csv")
+Grumpy <- read_csv("RECAP_CRUD/Grumpy_Usage_Report.csv")
 Grumpy$Date <- as.Date(Grumpy$Date, format = "%m/%d/%Y") %>% format("%m/%d/%Y") 
-Sneezy <- read_csv("Sneezy_Usage_Report.csv")
+Sneezy <- read_csv("RECAP_CRUD/Sneezy_Usage_Report.csv")
 Sneezy$Date <- as.Date(Sneezy$Date, format = "%m/%d/%Y") %>% format("%m/%d/%Y") 
-Fleet_Info <- read_csv("Fleet_Info.csv")
+Fleet_Info <- read_csv("RECAP_CRUD/Fleet_Info.csv")
 
 
 copy_to(

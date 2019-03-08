@@ -8,7 +8,7 @@ cat(paste("host:", dbCredentials$hostname, "dbname:", dbCredentials$name))
 
 OpenConnMySQL <- function() {
   print("Connecting to DB ...")
-  con_sql <- dbpool(drv = RMySQL::MySQL(), 
+  con_sql <- pool::dbPool (drv = RMySQL::MySQL(), 
                     dbname = dbCredentials$name,
                     host = dbCredentials$hostname,
                     port = dbCredentials$port,
