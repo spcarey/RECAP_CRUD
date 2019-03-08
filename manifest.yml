@@ -1,0 +1,6 @@
+ applications:
+ - name: RECAP_DATABASE
+   command: R --no-save --gui-none < startscript.R
+   instances: 1
+   memory: 1G
+   
