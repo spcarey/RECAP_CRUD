@@ -1,11 +1,4 @@
-#
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
-#
+
 
 library(shiny)
 library(shinydashboard)
@@ -15,26 +8,170 @@ library(dbplyr)
 library(pool)
 library(shinyalert)
 library(shinyWidgets)
+library(dplyr)
 
+
+#source("MySQL_CONN.R")
 
 #DATABASE CONNECTION POOL
 # Defines the parameters for connecting to the database 
-recapdb <- dbPool(
+
+
+
+library("jsonlite")
+
+getVolumeDir <- function(volumeName)
+{
+  json <- Sys.getenv("VCAP_SERVICES")
+  if (json == '')
+  {
+    stop("Missing VCAP_SERVICES")
+  }
+  vcapServices <- fromJSON(json, simplifyVector = FALSE, simplifyDataFrame = FALSE)
   
-  drv = RMySQL::MySQL(),
-  dbname = "recap",
-  host = "127.0.0.1",
-  port = 3306,
-  username = "root",
-  password = "!QAZ2wsx"
+  for (serviceType in vcapServices)
+  {
+    for (service in serviceType)
+    {
+      if (service$name == volumeName) {
+        return ( fromJSON(toJSON(service))$volume_mounts$container_dir )
+      }
+    }
+  }
+}
+
+getCredentials <- function(serviceName)
+{
+  json <- Sys.getenv("VCAP_SERVICES")
+  if (json == '')
+  {
+    stop("Missing VCAP_SERVICES")
+    
+  }
+  vcapServices <- fromJSON(json, simplifyVector = FALSE, simplifyDataFrame = FALSE)
   
+  for (serviceType in vcapServices)
+  {
+    for (service in serviceType)
+    {
+      if (service$name == serviceName) {
+        return ( fromJSON(toJSON(service))$credentials )
+      }
+    }
+  }
+}
+
+
+traceJsonNode <- function(name, node, printNode = FALSE) {
+  
+  if (printNode == TRUE)  {
+    cat(paste(name, "[", class(node), "]", length(node), "(", node, ")\n"))
+  }else {
+    cat(paste(name, "[", class(node), "]", length(node), "\n"))
+  }
+}
+
+
+library(pool)
+
+dbCredentials <- getCredentials("recap_db")
+cat(paste(dbCredentials))
+cat(paste("host:", dbCredentials$hostname, "dbname:", dbCredentials$name))
+
+
+OpenConnMySQL <- function() {
+  print("Connecting to DB ...")
+  con_sql <- pool::dbPool (drv = RMySQL::MySQL(), 
+                           dbname = dbCredentials$name,
+                           host = dbCredentials$hostname,
+                           port = 3306,
+                           username = dbCredentials$username,
+                           password = dbCredentials$password
+  )
+  
+  print(summary(con_sql))
+  
+  print("Connected to DB")
+  OpenConnMySQL = con_sql
+}
+
+recapdb <- pool::dbPool (drv = RMySQL::MySQL(), 
+                         dbname = "service_instance_db",
+                         host = 'q-n3s3y1.q-g28722.bosh',
+                         port = 3306,
+                         username = "7b803322829944d48045641ab4588777",
+                         password = "ou5k1w32e0z1zabb"
 )
 
-fleet_info <- recapdb %>%
-  tbl("Fleet_Info") %>%
-  dplyr::collect() 
+Sleepy <- read.csv("Sleepy_Usage_Report.csv", stringsAsFactors = FALSE)
+Sleepy$Date <- as.Date(Sleepy$Date, format = "%m/%d/%Y") %>% format("%m/%d/%Y") 
+Doc <- read.csv("Doc_Usage_Report.csv", stringsAsFactors = FALSE)
+Doc$Date <- as.Date(Doc$Date, format = "%m/%d/%Y") %>% format("%m/%d/%Y") 
+Grumpy <- read.csv("Grumpy_Usage_Report.csv", stringsAsFactors = FALSE)
+Grumpy$Date <- as.Date(Grumpy$Date, format = "%m/%d/%Y") %>% format("%m/%d/%Y") 
+Sneezy <- read.csv("Sneezy_Usage_Report.csv", stringsAsFactors = FALSE)
+Sneezy$Date <- as.Date(Sneezy$Date, format = "%m/%d/%Y") %>% format("%m/%d/%Y") 
+Fleet_Info <- read.csv("Fleet_Info.csv", stringsAsFactors = FALSE)
 
 
+
+
+
+#recapdb <- dbPool(
+  
+ # drv = RMySQL::MySQL(),
+  #dbname = "recap",
+  #host = "127.0.0.1",
+  #port = 3306,
+  #username = "root",
+  #password = "!QAZ2wsx")
+
+
+
+copy_to(
+  dest = recapdb,
+  name = "Sleepy",
+  df = Sleepy,
+  temporary = FALSE,
+  overwrite = TRUE
+) 
+
+copy_to(
+  dest = recapdb,
+  name = "Grumpy",
+  df = Grumpy,
+  temporary = FALSE,
+  overwrite = TRUE
+) 
+
+copy_to(
+  dest = recapdb,
+  name = "Doc",
+  df = Doc,
+  temporary = FALSE,
+  overwrite = TRUE
+) 
+
+copy_to(
+  dest = recapdb,
+  name = "Sneezy",
+  df = Sneezy,
+  temporary = FALSE,
+  overwrite = TRUE
+) 
+
+
+
+copy_to(
+  dest = recapdb,
+  name = "Fleet_Info",
+  df = Fleet_Info,
+  temporary = FALSE,
+  overwrite = TRUE
+) 
+
+
+fleet_info <- recapdb %>% tbl("Fleet_Info") %>% dplyr::collect() 
 
 #--------------------START UI FUNCTION----------------------------#
 ui <- dashboardPage(
@@ -61,7 +198,7 @@ ui <- dashboardPage(
                    #WIDGET FOR SELECTING AIRCRAFT
                    selectInput(inputId = "select_tail",
                                "Select Tail Number", 
-                               choices = c(Choose="", as.list(fleet_info$Tail_Num)),
+                               choices = c(Choose="", as.list(Fleet_Info$Tail_Num)),
                                selected = "Sleepy",
                                selectize = TRUE),
                    #WIDGET FOR SELECTING DATES
@@ -104,7 +241,7 @@ ui <- dashboardPage(
                 
                    selectInput(inputId = "insert_tail",
                                "Select Tail Number", 
-                               choices = c(Choose="", as.list(fleet_info$Tail_Num)),
+                               choices = c(Choose="", as.list(Fleet_Info$Tail_Num)),
                                selected = "Sleepy"
                                ),
                    #WIDGET FOR SELECTING DATES
@@ -140,7 +277,7 @@ ui <- dashboardPage(
                    #WIDGET FOR SELECTING AIRCRAFT
                    selectInput(inputId = "update_tail",
                                "Select Tail Number", 
-                               choices = c(Choose="", as.list(fleet_info$Tail_Num)),
+                               choices = c(Choose="", as.list(Fleet_Info$Tail_Num)),
                                selected = "Sleepy",
                                selectize = TRUE),
                    #WIDGET FOR SELECTING DATES
@@ -175,7 +312,7 @@ ui <- dashboardPage(
                    #WIDGET FOR SELECTING AIRCRAFT
                    selectInput("delete_tail",
                                "Select Tail Number", 
-                               choices = c(Choose="", as.list(fleet_info$Tail_Num)),
+                               choices = c(Choose="", as.list(Fleet_Info$Tail_Num)),
                                selected = "Sleepy",
                                selectize = TRUE),
                    #WIDGET FOR SELECTING DATES
