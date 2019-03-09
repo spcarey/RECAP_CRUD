@@ -10,7 +10,8 @@ packages:
      - name: dbplyr
      - name: shinyalert
      - name: shinyWidgets
-     - name: pool
+     - name: DBI
      - name: jsonlite
+     
 
 

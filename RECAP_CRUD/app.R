@@ -5,7 +5,7 @@ library(shinydashboard)
 library(DT)
 library(lubridate)
 library(dbplyr)
-library(pool)
+library(DBI)
 library(shinyalert)
 library(shinyWidgets)
 library(dplyr)
@@ -72,30 +72,21 @@ traceJsonNode <- function(name, node, printNode = FALSE) {
 }
 
 
-library(pool)
+
 
 dbCredentials <- getCredentials("recap_db")
 cat(paste(dbCredentials))
 cat(paste("host:", dbCredentials$hostname, "dbname:", dbCredentials$name))
 
 
-OpenConnMySQL <- function() {
-  print("Connecting to DB ...")
-  con_sql <- pool::dbPool (drv = RMySQL::MySQL(), 
-                           dbname = dbCredentials$name,
-                           host = dbCredentials$hostname,
-                           port = 3306,
-                           username = dbCredentials$username,
-                           password = dbCredentials$password
-  )
-  
-  print(summary(con_sql))
-  
-  print("Connected to DB")
-  OpenConnMySQL = con_sql
-}
 
-recapdb <- pool::dbPool (drv = RMySQL::MySQL(), 
+  
+
+
+ 
+
+
+dbargs <- list(drv = RMySQL::MySQL(), 
                          dbname = "service_instance_db",
                          host = 'q-n3s3y1.q-g28722.bosh',
                          port = 3306,
@@ -117,61 +108,7 @@ Fleet_Info <- read.csv("Fleet_Info.csv", stringsAsFactors = FALSE)
 
 
 
-#recapdb <- dbPool(
-  
- # drv = RMySQL::MySQL(),
-  #dbname = "recap",
-  #host = "127.0.0.1",
-  #port = 3306,
-  #username = "root",
-  #password = "!QAZ2wsx")
 
-
-
-copy_to(
-  dest = recapdb,
-  name = "Sleepy",
-  df = Sleepy,
-  temporary = FALSE,
-  overwrite = TRUE
-) 
-
-copy_to(
-  dest = recapdb,
-  name = "Grumpy",
-  df = Grumpy,
-  temporary = FALSE,
-  overwrite = TRUE
-) 
-
-copy_to(
-  dest = recapdb,
-  name = "Doc",
-  df = Doc,
-  temporary = FALSE,
-  overwrite = TRUE
-) 
-
-copy_to(
-  dest = recapdb,
-  name = "Sneezy",
-  df = Sneezy,
-  temporary = FALSE,
-  overwrite = TRUE
-) 
-
-
-
-copy_to(
-  dest = recapdb,
-  name = "Fleet_Info",
-  df = Fleet_Info,
-  temporary = FALSE,
-  overwrite = TRUE
-) 
-
-
-fleet_info <- recapdb %>% tbl("Fleet_Info") %>% dplyr::collect() 
 
 #--------------------START UI FUNCTION----------------------------#
 ui <- dashboardPage(
@@ -345,16 +282,11 @@ server <- function(input, output) {
   
   
   
-    observeEvent(input$select_button, {
-      
-      #showNotification("Query Sent")
-       # showModal(modalDialog(title = "Important","Important Message"))
-      #shinyalert("Ooops!!!", "Something went wrong", type = "error")
-    })
-  
     #Reacts the action button on the INSERT tab. Takes values from choices, sends as SQL query
     select_button_click <- eventReactive( input$select_button,  {
       
+      recapdb <- do.call(DBI::dbConnect, dbargs)
+      on.exit(DBI::dbDisconnect(recapdb))
       
    df <- recapdb %>% 
         tbl(input$select_tail) %>% collect()
@@ -364,14 +296,13 @@ server <- function(input, output) {
           mutate(Date = mdy(Date)) %>%
           filter( Date >= ymd( input$select_date1 ) & Date <= ymd(input$select_date2))
         
-         
-        
         }) 
     
     #end select button click
     
     # OUTPUT for table in SELECT Tab
     output$select_tab <- renderDataTable(
+      
       select_button_click()
       )
     
@@ -383,12 +314,16 @@ server <- function(input, output) {
     
     observeEvent(input$insert_button, {
       
+      recapdb <- do.call(DBI::dbConnect, dbargs)
+      on.exit(DBI::dbDisconnect(recapdb))
+      
       datey <- (recapdb %>% tbl(input$insert_tail) %>% select("Date") %>% collect() %>% as.list() )
       datey <- mdy(datey[[1]]) %>% as.character()
       
       if(as.character(input$insert_date) %in% datey){
         
         shinyalert("Ooops!!!", "This Date already has a Record", type = "error")
+       
         
       } else {
         date <- as.character( format(input$insert_date, "%m/%d/%Y"))
@@ -400,6 +335,9 @@ server <- function(input, output) {
                                                collect() %>% mutate(Date = mdy(Date)) %>% 
                                               arrange(desc(Date)))
        shinyalert("Success!", "New log entry added", type = "success")
+       
+       RMySQL::dbDisconnect(RMySQL::dbListConnections(RMySQL::MySQL())[[1]])
+       
       }
       
     })# end observe event for INSERT TAB
@@ -408,6 +346,9 @@ server <- function(input, output) {
     
     #Reacts to button click on UPDATE Tab
     observeEvent(input$update_button, {
+      
+      recapdb <- do.call(DBI::dbConnect, dbargs)
+      on.exit(DBI::dbDisconnect(recapdb))
       
       #get date column, coerce to date list for use in IF statement
       datey <- (recapdb %>% tbl(input$update_tail) %>% select("Date") %>% collect() %>% as.list() )
@@ -434,10 +375,13 @@ server <- function(input, output) {
         #popup notification to show success
         shinyalert("Success!", "Previous Log entry updated", type = "success")
         
+        
       } else {
         
         #ERROR POPUP WINDOW
         shinyalert("Ooops!!!", "This Date doesn't have a record", type = "error")
+        
+       
       }
       
     })# end observe event for UPDATE TAB
@@ -446,6 +390,9 @@ server <- function(input, output) {
   #______________DELETE TAB_______________________________#
     #Reacts to button click on DELETE Tab
     observeEvent(input$delete_button, {
+      
+      recapdb <- do.call(DBI::dbConnect, dbargs)
+      on.exit(DBI::dbDisconnect(recapdb))
       
       #get date column, coerce to date list for use in IF statement
       datey <- (recapdb %>% tbl(input$delete_tail) %>% select("Date") %>% collect() %>% as.list() )
@@ -456,7 +403,7 @@ server <- function(input, output) {
       #IF DATE INPUT IS IN DATABASE PROCEED WITH UPDATE, ELSE SHOW ERROR POPUP
       if(as.character(input$delete_date) %in% datey){ 
         
-        date <- as.character( format(input$delete_date, "%m/%d/%Y"))
+         date <- as.character( format(input$delete_date, "%m/%d/%Y"))
         
         #Build SQL Statement
         sql_code <- paste0("DELETE FROM"," ",input$delete_tail," ","WHERE"," ","Date ="," ","\'", date, "\'",";")
@@ -464,33 +411,37 @@ server <- function(input, output) {
         #send SQL Statement
         dbGetQuery(recapdb, sql_code)
         
+        
+        
         #Create Output object Table that shows updated entry
-        output$delete_data <- renderDataTable(recapdb %>%
-                                                tbl(input$update_tail) %>% 
-                                                collect()
+        output$delete_data <- renderDataTable(
+          
+          recapdb %>%
+            tbl(input$update_tail) %>%
+            collect()
                                              )
         #popup notification to show success
         shinyalert("Success!", "Log entry Removed", type = "success")
+        
         
       } else {
         
         #ERROR POPUP WINDOW
         shinyalert("Ooops!!!", "This Date doesn't have a record", type = "error")
+        
+       
       }
       
-    })# end observe event for UPDATE TAB
+    })# end observe event for DELETE TAB
     
-     eventReactive(input$insert_tail, { 
-      #renderPrint( recapdb %>% tbl(input$insert_tail) %>% ncol() )
-      print("PRINT")
-    })
+    
     
   #___________________END TABS___________________#  
     
-  # Disconnects Database pool instance
-  onStop(function() {
-    poolClose(recapdb)
-  })
+   #Disconnects Database pool instance
+  #onStop(function() {
+    #poolClose(recapdb)
+  #})
   
   }
 #__________________END SERVER____________________#
