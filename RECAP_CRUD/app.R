@@ -377,7 +377,7 @@ server <- function(input, output) {
           on.exit(DBI::dbDisconnect(recapdb))
           
           recapdb %>%
-            tbl("Doc") %>%
+            tbl(input$delete_tail) %>%
             collect()
                                              })
         #popup notification to show success
