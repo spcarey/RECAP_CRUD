@@ -18,68 +18,17 @@ library(dplyr)
 
 
 
-library("jsonlite")
 
-getVolumeDir <- function(volumeName)
-{
-  json <- Sys.getenv("VCAP_SERVICES")
-  if (json == '')
-  {
-    stop("Missing VCAP_SERVICES")
-  }
-  vcapServices <- fromJSON(json, simplifyVector = FALSE, simplifyDataFrame = FALSE)
+
+
+#dbargs <- list(
   
-  for (serviceType in vcapServices)
-  {
-    for (service in serviceType)
-    {
-      if (service$name == volumeName) {
-        return ( fromJSON(toJSON(service))$volume_mounts$container_dir )
-      }
-    }
-  }
-}
-
-getCredentials <- function(serviceName)
-{
-  json <- Sys.getenv("VCAP_SERVICES")
-  if (json == '')
-  {
-    stop("Missing VCAP_SERVICES")
-    
-  }
-  vcapServices <- fromJSON(json, simplifyVector = FALSE, simplifyDataFrame = FALSE)
-  
-  for (serviceType in vcapServices)
-  {
-    for (service in serviceType)
-    {
-      if (service$name == serviceName) {
-        return ( fromJSON(toJSON(service))$credentials )
-      }
-    }
-  }
-}
-
-
-traceJsonNode <- function(name, node, printNode = FALSE) {
-  
-  if (printNode == TRUE)  {
-    cat(paste(name, "[", class(node), "]", length(node), "(", node, ")\n"))
-  }else {
-    cat(paste(name, "[", class(node), "]", length(node), "\n"))
-  }
-}
-
-
-
-
-dbCredentials <- getCredentials("recap_db")
-cat(paste(dbCredentials))
-cat(paste("host:", dbCredentials$hostname, "dbname:", dbCredentials$name))
-
-
-
+#  drv = RMySQL::MySQL(),
+# dbname = "recap",
+# host = "localhost",
+#  port = 3306,
+#  username = "recapuser",
+#  password = "!QAZ2wsx")
   
 
 
@@ -91,17 +40,16 @@ dbargs <- list(drv = RMySQL::MySQL(),
                          host = 'q-n3s3y1.q-g28722.bosh',
                          port = 3306,
                          username = "7b803322829944d48045641ab4588777",
-                         password = "ou5k1w32e0z1zabb"
-)
+                         password = "ou5k1w32e0z1zabb")
 
-Sleepy <- read.csv("Sleepy_Usage_Report.csv", stringsAsFactors = FALSE)
-Sleepy$Date <- as.Date(Sleepy$Date, format = "%m/%d/%Y") %>% format("%m/%d/%Y") 
-Doc <- read.csv("Doc_Usage_Report.csv", stringsAsFactors = FALSE)
-Doc$Date <- as.Date(Doc$Date, format = "%m/%d/%Y") %>% format("%m/%d/%Y") 
-Grumpy <- read.csv("Grumpy_Usage_Report.csv", stringsAsFactors = FALSE)
-Grumpy$Date <- as.Date(Grumpy$Date, format = "%m/%d/%Y") %>% format("%m/%d/%Y") 
-Sneezy <- read.csv("Sneezy_Usage_Report.csv", stringsAsFactors = FALSE)
-Sneezy$Date <- as.Date(Sneezy$Date, format = "%m/%d/%Y") %>% format("%m/%d/%Y") 
+#Sleepy <- read.csv("Sleepy_Usage_Report.csv", stringsAsFactors = FALSE)
+#Sleepy$Date <- as.Date(Sleepy$Date, format = "%m/%d/%Y") %>% format("%m/%d/%Y") 
+#Doc <- read.csv("Doc_Usage_Report.csv", stringsAsFactors = FALSE)
+#Doc$Date <- as.Date(Doc$Date, format = "%m/%d/%Y") %>% format("%m/%d/%Y") 
+#Grumpy <- read.csv("Grumpy_Usage_Report.csv", stringsAsFactors = FALSE)
+#Grumpy$Date <- as.Date(Grumpy$Date, format = "%m/%d/%Y") %>% format("%m/%d/%Y") 
+#Sneezy <- read.csv("Sneezy_Usage_Report.csv", stringsAsFactors = FALSE)
+#Sneezy$Date <- as.Date(Sneezy$Date, format = "%m/%d/%Y") %>% format("%m/%d/%Y") 
 Fleet_Info <- read.csv("Fleet_Info.csv", stringsAsFactors = FALSE)
 
 
@@ -286,7 +234,7 @@ server <- function(input, output) {
     select_button_click <- eventReactive( input$select_button,  {
       
       recapdb <- do.call(DBI::dbConnect, dbargs)
-      on.exit(DBI::dbDisconnect(recapdb))
+      on.exit( DBI::dbDisconnect(recapdb))
       
    df <- recapdb %>% 
         tbl(input$select_tail) %>% collect()
@@ -295,16 +243,19 @@ server <- function(input, output) {
         df %>%
           mutate(Date = mdy(Date)) %>%
           filter( Date >= ymd( input$select_date1 ) & Date <= ymd(input$select_date2))
-        
+       
         }) 
     
     #end select button click
     
+    #___________________________________
+    
     # OUTPUT for table in SELECT Tab
-    output$select_tab <- renderDataTable(
+    output$select_tab <- renderDataTable({
       
       select_button_click()
-      )
+      
+      })
     
     
     
@@ -330,13 +281,16 @@ server <- function(input, output) {
        sql_code <- paste0("INSERT INTO"," ",input$insert_tail," ","VALUES"," ","(","\'",date,"\',","\'",input$insert_hours,"\'",","," ","\'",input$insert_opnhrs,"\'",")")
        #print(sql_code)
        dbGetQuery(recapdb, sql_code)
-       output$insert_data <- renderDataTable(recapdb %>%
-                                               tbl(input$insert_tail) %>% 
-                                               collect() %>% mutate(Date = mdy(Date)) %>% 
-                                              arrange(desc(Date)))
+       output$insert_data <- renderDataTable({
+         
+         recapdb <- do.call(DBI::dbConnect, dbargs)
+         on.exit(DBI::dbDisconnect(recapdb))
+         
+         recapdb %>% tbl(input$insert_tail) %>% collect() %>% mutate(Date = mdy(Date)) %>% arrange(desc(Date))
+         })
        shinyalert("Success!", "New log entry added", type = "success")
        
-       RMySQL::dbDisconnect(RMySQL::dbListConnections(RMySQL::MySQL())[[1]])
+      
        
       }
       
@@ -368,10 +322,13 @@ server <- function(input, output) {
         dbGetQuery(recapdb, sql_code)
         
         #Create Output object Table that shows updated entry
-        output$update_data <- renderDataTable(recapdb %>%
-                                                tbl(input$update_tail) %>% 
-                                                filter(Date == date) %>% collect()
-                                              )
+        output$update_data <- renderDataTable({
+          
+          recapdb <- do.call(DBI::dbConnect, dbargs)
+          on.exit(DBI::dbDisconnect(recapdb))
+          
+          recapdb %>%  tbl(input$update_tail) %>% filter(Date == date) %>% collect()
+                                              })
         #popup notification to show success
         shinyalert("Success!", "Previous Log entry updated", type = "success")
         
@@ -414,12 +371,15 @@ server <- function(input, output) {
         
         
         #Create Output object Table that shows updated entry
-        output$delete_data <- renderDataTable(
+        output$delete_data <- renderDataTable({
+          
+          recapdb <- do.call(DBI::dbConnect, dbargs)
+          on.exit(DBI::dbDisconnect(recapdb))
           
           recapdb %>%
-            tbl(input$update_tail) %>%
+            tbl("Doc") %>%
             collect()
-                                             )
+                                             })
         #popup notification to show success
         shinyalert("Success!", "Log entry Removed", type = "success")
         

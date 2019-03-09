@@ -3,13 +3,13 @@ library(dplyr)
 library(readr)
 library(DBI)
 
-recapdb <- dbPool(
+dbargs <- list(
    
    drv = RMySQL::MySQL(),
    dbname = "recap",
-   host = "127.0.0.1",
+   host = "localhost",
    port = 3306,
-   username = "root",
+   username = "recapuser",
    password = "!QAZ2wsx"
    
 )
@@ -25,21 +25,28 @@ Sneezy$Date <- as.Date(Sneezy$Date, format = "%m/%d/%Y") %>% format("%m/%d/%Y")
 Fleet_Info <- read_csv("RECAP_CRUD/Fleet_Info.csv")
 
 
+conn <- do.call(DBI::dbConnect, dbargs)
+on.exit(DBI::dbDisconnect(conn))
+
 copy_to(
-   dest = recapdb,
+   dest = conn,
    name = "Sleepy",
    df = Sleepy,
    temporary = FALSE,
    overwrite = TRUE
    ) 
 
+dbDisconnect(recapdb)
+
 copy_to(
-   dest = recapdb,
+   dest = conn,
    name = "Grumpy",
    df = Grumpy,
    temporary = FALSE,
    overwrite = TRUE
 ) 
+
+dbDisconnect(recapdb)
 
 copy_to(
    dest = recapdb,
@@ -49,6 +56,8 @@ copy_to(
    overwrite = TRUE
 ) 
 
+dbDisconnect(recapdb)
+
 copy_to(
    dest = recapdb,
    name = "Sneezy",
@@ -57,6 +66,8 @@ copy_to(
    overwrite = TRUE
 ) 
 
+dbDisconnect(recapdb)
+
 copy_to(
    dest = recapdb,
    name = "Fleet_Info",
@@ -64,6 +75,8 @@ copy_to(
    temporary = FALSE,
    overwrite = TRUE
 ) 
+
+dbDisconnect(conn)
 
 tail <- "Doc"
 date <- "2/2/2019"
@@ -144,3 +157,76 @@ grepl(datez, datey$Date)
 datex %in% datey[[1]]
 
 as.character( mdy(datey[[1]]))
+
+
+OpenConnMySQL <- function() {
+  print("Connecting to DB ...")
+  con_sql <- DBI::dbConnect (drv = RMariaDB::MariaDB(), 
+                             dbname = dbCredentials$name,
+                             host = dbCredentials$hostname,
+                             port = 3306,
+                             username = dbCredentials$username,
+                             password = dbCredentials$password
+  )
+  
+  
+  
+  ibrary("jsonlite")
+  
+  getVolumeDir <- function(volumeName)
+  {
+    json <- Sys.getenv("VCAP_SERVICES")
+    if (json == '')
+    {
+      stop("Missing VCAP_SERVICES")
+    }
+    vcapServices <- fromJSON(json, simplifyVector = FALSE, simplifyDataFrame = FALSE)
+    
+    for (serviceType in vcapServices)
+    {
+      for (service in serviceType)
+      {
+        if (service$name == volumeName) {
+          return ( fromJSON(toJSON(service))$volume_mounts$container_dir )
+        }
+      }
+    }
+  }
+  
+  getCredentials <- function(serviceName)
+  {
+    json <- Sys.getenv("VCAP_SERVICES")
+    if (json == '')
+    {
+      stop("Missing VCAP_SERVICES")
+      
+    }
+    vcapServices <- fromJSON(json, simplifyVector = FALSE, simplifyDataFrame = FALSE)
+    
+    for (serviceType in vcapServices)
+    {
+      for (service in serviceType)
+      {
+        if (service$name == serviceName) {
+          return ( fromJSON(toJSON(service))$credentials )
+        }
+      }
+    }
+  }
+  
+  
+  traceJsonNode <- function(name, node, printNode = FALSE) {
+    
+    if (printNode == TRUE)  {
+      cat(paste(name, "[", class(node), "]", length(node), "(", node, ")\n"))
+    }else {
+      cat(paste(name, "[", class(node), "]", length(node), "\n"))
+    }
+  }
+  
+  
+  
+  
+  dbCredentials <- getCredentials("recap_db")
+  cat(paste(dbCredentials))
+  cat(paste("host:", dbCredentials$hostname, "dbname:", dbCredentials$name))
