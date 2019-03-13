@@ -20,13 +20,13 @@ VCAP <- getCredentials("VCAP_SERVICES")
 
 
 dbargs <- list(drv = RMySQL::MySQL(), 
-                         dbname = VCAP$instance_name,
+                         dbname = VCAP$credentials.name,
                          host =  VCAP$credentials.hostname,
                          port = 3306,
                          username = VCAP$credentials.username,
                          password = VCAP$credentials.password)
 
-print(dbargs)
+
 
 
 #Sleepy <- read.csv("Sleepy_Usage_Report.csv", stringsAsFactors = FALSE)
