@@ -1,8 +1,5 @@
 
 
-
-
-
 insert_DB <- function(x,y){
 
 
@@ -41,14 +38,5 @@ Sleepy_sql <- insert_DB(Sleepy, "Sleepy")
 
 
 
-x[2, 1]
-
-dbGetQuery(recapdb, x$sql_code[1] )
-
-
-
-
-
-Grumpy_sql[1]
 
 

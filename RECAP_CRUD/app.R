@@ -9,38 +9,25 @@ library(DBI)
 library(shinyalert)
 library(shinyWidgets)
 library(dplyr)
+library(jsonlite)
 
 
-#source("MySQL_CONN.R")
-
-#DATABASE CONNECTION POOL
-# Defines the parameters for connecting to the database 
+source("func.R")
 
 
+VCAP <- getCredentials("VCAP_SERVICES")
 
-
-
-
-#dbargs <- list(
-  
-#  drv = RMySQL::MySQL(),
-# dbname = "recap",
-# host = "localhost",
-#  port = 3306,
-#  username = "recapuser",
-#  password = "!QAZ2wsx")
-  
-
-
- 
 
 
 dbargs <- list(drv = RMySQL::MySQL(), 
-                         dbname = "service_instance_db",
-                         host = 'q-n3s3y1.q-g28722.bosh',
+                         dbname = VCAP$instance_name,
+                         host =  VCAP$credentials.hostname,
                          port = 3306,
-                         username = "7b803322829944d48045641ab4588777",
-                         password = "ou5k1w32e0z1zabb")
+                         username = VCAP$credentials.username,
+                         password = VCAP$credentials.password)
+
+print(dbargs)
+
 
 #Sleepy <- read.csv("Sleepy_Usage_Report.csv", stringsAsFactors = FALSE)
 #Sleepy$Date <- as.Date(Sleepy$Date, format = "%m/%d/%Y") %>% format("%m/%d/%Y") 
