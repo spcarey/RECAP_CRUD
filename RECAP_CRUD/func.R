@@ -1,3 +1,4 @@
+
 getCredentials <- function(serviceName)
 {
   json <- Sys.getenv(serviceName)
@@ -7,9 +8,9 @@ getCredentials <- function(serviceName)
     
   } else {
     
-    vcapServices <- fromJSON(json, flatten = TRUE)
+    vcapServices <- jsonlite::fromJSON(json, flatten = TRUE)
     
-    vcapServices <- as_tibble(vcapServices$p.mysql)
+    vcapServices <- dplyr::as_tibble(vcapServices$p.mysql)
     
   }
 }  
