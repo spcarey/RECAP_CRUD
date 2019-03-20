@@ -26,23 +26,14 @@ dbargs <- list(drv = RMySQL::MySQL(),
                          username = VCAP$credentials.username,
                          password = VCAP$credentials.password)
 
+#dbargs <- list(drv = RMySQL::MySQL(), dbname = "recap", host = "127.0.0.1", port = 3306, username = "root", password = "!QAZ2wsx")
 
+recapdb <- do.call(DBI::dbConnect, dbargs)
 
+ 
+Fleet_Info <- recapdb %>% tbl("Fleet_Info") %>% collect()
 
-#Sleepy <- read.csv("Sleepy_Usage_Report.csv", stringsAsFactors = FALSE)
-#Sleepy$Date <- as.Date(Sleepy$Date, format = "%m/%d/%Y") %>% format("%m/%d/%Y") 
-#Doc <- read.csv("Doc_Usage_Report.csv", stringsAsFactors = FALSE)
-#Doc$Date <- as.Date(Doc$Date, format = "%m/%d/%Y") %>% format("%m/%d/%Y") 
-#Grumpy <- read.csv("Grumpy_Usage_Report.csv", stringsAsFactors = FALSE)
-#Grumpy$Date <- as.Date(Grumpy$Date, format = "%m/%d/%Y") %>% format("%m/%d/%Y") 
-#Sneezy <- read.csv("Sneezy_Usage_Report.csv", stringsAsFactors = FALSE)
-#Sneezy$Date <- as.Date(Sneezy$Date, format = "%m/%d/%Y") %>% format("%m/%d/%Y") 
-Fleet_Info <- read.csv("Fleet_Info.csv", stringsAsFactors = FALSE)
-
-
-
-
-
+DBI::dbDisconnect(recapdb)
 
 
 #--------------------START UI FUNCTION----------------------------#
@@ -224,7 +215,7 @@ server <- function(input, output) {
       on.exit( DBI::dbDisconnect(recapdb))
       
    df <- recapdb %>% 
-        tbl(input$select_tail) %>% collect()
+        tbl("fleet_data") %>%  filter(Tail_Num == input$select_tail) %>% collect()
         
         
         df %>%
@@ -255,7 +246,7 @@ server <- function(input, output) {
       recapdb <- do.call(DBI::dbConnect, dbargs)
       on.exit(DBI::dbDisconnect(recapdb))
       
-      datey <- (recapdb %>% tbl(input$insert_tail) %>% select("Date") %>% collect() %>% as.list() )
+      datey <- (recapdb %>% tbl("fleet_data") %>% filter(Tail_Num == input$insert_tail) %>% select("Date") %>% collect() %>% as.list() )
       datey <- mdy(datey[[1]]) %>% as.character()
       
       if(as.character(input$insert_date) %in% datey){
@@ -265,7 +256,7 @@ server <- function(input, output) {
         
       } else {
         date <- as.character( format(input$insert_date, "%m/%d/%Y"))
-       sql_code <- paste0("INSERT INTO"," ",input$insert_tail," ","VALUES"," ","(","\'",date,"\',","\'",input$insert_hours,"\'",","," ","\'",input$insert_opnhrs,"\'",")")
+       sql_code <- paste0("INSERT INTO"," ","fleet_data"," ","VALUES"," ","(","\'",input$insert_tail,"\',","\'",date,"\',","\'",input$insert_hours,"\'",","," ","\'",input$insert_opnhrs,"\'",")")
        #print(sql_code)
        dbGetQuery(recapdb, sql_code)
        output$insert_data <- renderDataTable({
@@ -273,7 +264,7 @@ server <- function(input, output) {
          recapdb <- do.call(DBI::dbConnect, dbargs)
          on.exit(DBI::dbDisconnect(recapdb))
          
-         recapdb %>% tbl(input$insert_tail) %>% collect() %>% mutate(Date = mdy(Date)) %>% arrange(desc(Date))
+         recapdb %>% tbl("fleet_data") %>% filter(Tail_Num == input$insert_tail) %>% collect() %>% mutate(Date = mdy(Date)) %>% arrange(desc(Date))
          })
        shinyalert("Success!", "New log entry added", type = "success")
        
@@ -292,7 +283,7 @@ server <- function(input, output) {
       on.exit(DBI::dbDisconnect(recapdb))
       
       #get date column, coerce to date list for use in IF statement
-      datey <- (recapdb %>% tbl(input$update_tail) %>% select("Date") %>% collect() %>% as.list() )
+      datey <- (recapdb %>% tbl("fleet_data") %>%  filter(Tail_Num == input$update_tail) %>% select("Date") %>% collect() %>% as.list() )
       
       #coerce date list from above into a character list for use as a condition in the IF statement
       datey <- mdy(datey[[1]]) %>% as.character()
@@ -303,7 +294,7 @@ server <- function(input, output) {
         date <- as.character( format(input$update_date, "%m/%d/%Y"))
         
         #Build SQL Statement
-        sql_code <- paste0("UPDATE"," ",input$update_tail," ","SET"," ","Hours ="," ","\'", input$update_hours, "\'"," ",",","Opn_Hrs ="," ","\'", input$update_hours, "\'"," ","WHERE Date ="," ","\'",date,"\'",";")
+        sql_code <- paste0("UPDATE"," ","fleet_data"," ","SET"," ","Tail_Num = "," ","\'", input$update_tail, "\'",",","Hours ="," ","\'", input$update_hours, "\'"," ",",","Opn_Hrs ="," ","\'", input$update_hours, "\'"," ","WHERE Date ="," ","\'",date,"\'",";")
         print(sql_code)
         #send SQL Statement
         dbGetQuery(recapdb, sql_code)
@@ -314,7 +305,8 @@ server <- function(input, output) {
           recapdb <- do.call(DBI::dbConnect, dbargs)
           on.exit(DBI::dbDisconnect(recapdb))
           
-          recapdb %>%  tbl(input$update_tail) %>% filter(Date == date) %>% collect()
+          recapdb %>%  tbl("fleet_data") %>% filter(Tail_Num == input$update_tail,
+                                                    Date == date) %>% collect()
                                               })
         #popup notification to show success
         shinyalert("Success!", "Previous Log entry updated", type = "success")
@@ -339,7 +331,7 @@ server <- function(input, output) {
       on.exit(DBI::dbDisconnect(recapdb))
       
       #get date column, coerce to date list for use in IF statement
-      datey <- (recapdb %>% tbl(input$delete_tail) %>% select("Date") %>% collect() %>% as.list() )
+      datey <- (recapdb %>% tbl("fleet_data") %>% filter(Tail_Num == input$delete_tail) %>% select("Date") %>% collect() %>% as.list() )
       
       #coerce date list from above into a character list for use as a condition in the IF statement
       datey <- mdy(datey[[1]]) %>% as.character()
@@ -350,7 +342,7 @@ server <- function(input, output) {
          date <- as.character( format(input$delete_date, "%m/%d/%Y"))
         
         #Build SQL Statement
-        sql_code <- paste0("DELETE FROM"," ",input$delete_tail," ","WHERE"," ","Date ="," ","\'", date, "\'",";")
+        sql_code <- paste0("DELETE FROM"," ","fleet_data"," ","WHERE"," ","Tail_Num =","\'", input$delete_tail, "\'"," ","AND"," ","Date ="," ","\'", date, "\'",";")
         print(sql_code)
         #send SQL Statement
         dbGetQuery(recapdb, sql_code)
@@ -364,7 +356,7 @@ server <- function(input, output) {
           on.exit(DBI::dbDisconnect(recapdb))
           
           recapdb %>%
-            tbl(input$delete_tail) %>%
+            tbl("fleet_data") %>%  filter(Tail_Num == input$delete_tail) %>%
             collect()
                                              })
         #popup notification to show success
