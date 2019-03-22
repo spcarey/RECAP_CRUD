@@ -13,7 +13,47 @@ library(jsonlite)
 library(httr)
 
 
+
+
+
+if (interactive()) {
+  # testing url
+  options(shiny.port = 8100)
+  APP_URL <- "http://localhost:8100/"
+} else {
+  # deployed URL
+  APP_URL <- "https://recapdatabase.apps.np.first-light.io:4443/"
+}
+
 source("func.R")
+
+VCAPSSO <- getCredentials_sso("VCAP_SERVICES")
+
+dplyr::glimpse(VCAPSSO)
+
+
+app <- oauth_app("RECAP_DATABASE",
+                 key = VCAPSSO$credentials.client_id,
+                 secret = VCAPSSO$credentials.client_secret,
+                 redirect_uri = APP_URL
+)
+
+# Here I'm using a canned endpoint, but you can create with oauth_endpoint()
+api <- oauth_endpoint(authorize = "https://sso.login.sys.np.first-light.io/oauth/authorize",
+                      access = "https://sso.login.sys.np.first-light.io/oauth/token" )
+
+
+scope <- "openid"
+
+# Shiny -------------------------------------------------------------------
+
+has_auth_code <- function(params) {
+  # params is a list object containing the parsed URL parameters. Return TRUE if
+  # based on these parameters, it looks like auth codes are present that we can
+  # use to get an access token. If not, it means we need to go through the OAuth
+  # flow.
+  return(!is.null(params$code))
+}
 
 
 
@@ -203,9 +243,17 @@ ui <- dashboardPage(
     )
   ) # END BODY CONTENT
 )
+#----------------START uiFunc----------------#
 
-
-
+uiFunc <- function(req) {
+  if (!has_auth_code(parseQueryString(req$QUERY_STRING))) {
+    url <- oauth2.0_authorize_url(api, app, scope = scope)
+    redirect <- sprintf("location.replace(\"%s\");", url)
+    tags$script(HTML(redirect))
+  } else {
+    ui
+  }
+}
 
 
 
@@ -392,5 +440,5 @@ server <- function(input, output, session) {
   }
 #__________________END SERVER____________________#
 
-shinyApp(ui = ui , server = server) # Runs app by calling the ui and server functions
+shinyApp(ui = uiFunc , server = server) # Runs app by calling the ui and server functions
 
