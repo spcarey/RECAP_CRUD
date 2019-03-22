@@ -10,9 +10,12 @@ library(shinyalert)
 library(shinyWidgets)
 library(dplyr)
 library(jsonlite)
+library(httr)
 
 
 source("func.R")
+
+
 
 
 VCAP <- getCredentials("VCAP_SERVICES")
@@ -202,9 +205,13 @@ ui <- dashboardPage(
 )
 
 
+
+
+
+
 #-----------------START SERVER Function----------------#
 
-server <- function(input, output) { 
+server <- function(input, output, session) { 
   
   
   
@@ -385,5 +392,5 @@ server <- function(input, output) {
   }
 #__________________END SERVER____________________#
 
-shinyApp(ui, server) # Runs app by calling the ui and server functions
+shinyApp(ui = ui , server = server) # Runs app by calling the ui and server functions
 
