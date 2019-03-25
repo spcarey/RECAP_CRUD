@@ -29,7 +29,7 @@ source("func.R")
 
 VCAPSSO <- getCredentials_sso("VCAP_SERVICES")
 
-dplyr::glimpse(VCAPSSO)
+
 
 
 app <- oauth_app("RECAP_DATABASE",
